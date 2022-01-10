@@ -14,12 +14,12 @@ include Cotcube::Helpers
 require 'raabro'
 require 'fugit'
 
-%w[ constants helpers command_parser ].each do |part|
+%w[ constants helpers command_parser library job ].each do |part|
   require_relative "cotcube-scheduler/#{part}"
 end
 
 module Cotcube
-  module EOX
+  module Scheduler
 
     # please note that module_functions of sources provided in non-public files must slso be published within these
   end
