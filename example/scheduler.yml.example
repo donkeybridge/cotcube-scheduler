@@ -1,0 +1,12 @@
+# This is a sample YAML configuration file for cotcube EOX
+# It must be placed into your cotcube configuration directory, e.g. as /etc/cotcube/eox.yml
+# Please note the substitutes section. Keys given there can be used in job specs as {{ KEY }}
+#   and will be replaced on after reading the file but before parsing it to yaml.
+#   this is case_sensitive!
+---
+jobs_path:    '/etc/cotcube/jobs'
+substitutes:
+  HOSTNAME:   www.example.com
+  WWW_PORT:   8088
+  CronJob01:  15 16 * * 1-5 America/Chicago
+--

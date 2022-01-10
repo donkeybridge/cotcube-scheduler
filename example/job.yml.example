@@ -1,0 +1,33 @@
+# this is an example job specification
+#
+# as listed there are mandatory and optional parameters. presence of parameters is validated before joblist is going productive.
+# 
+# you can specify variables in {{ double curly brackets }} that will be substituted during the loading process. those variables
+#   need to be placed in the main configuration file eox.yml in the SUBSTITUTES section. 
+# 
+# There are also some function available to be used in {{ double curly brackets }}:
+#    {{ RANDOM(x) }}  --> is replaced by Random.rand(x).round(2)
+#    {{ MINUTES(x) }} --> is replaced by 'x * 60'
+#    {{ HOURS(x)   }} {{ DAYS(x) }} {{ WEEKS(x) }} 
+#
+---
+name:                          # MANDATORY: an arbitrary name
+inactive:           true       # OPTIONAL:  defaults to false (i.e. job with unset is active)
+command:                       # MANDATORY: has the form '[ PARAM=value [ PARAM2=value [...] ] ] <command> [ ARGS ]
+schedule_start:                # MANDATORY: expects a cron-readable string, also uses @values defined in constants
+schedule_end:                  # OPTIONAL:  expects a cron-readable string, also uses @values defined in constants, defaults to @never
+startup_delay:                 # OPTIONAL:  expects a (float/int) number of seconds, can take a lambda
+run_duration:                  # MANDATORY: expects a (float/int) number of seconds, guessing the run time of the job
+warn_duration:                 # OPTIONAL:  expects a (float/int) number of seconds, defaults to 2x run_duration
+max_duration:                  # OPTIONAL:  expects a (float/int) number of seconds, defaults to 4x run_duration
+output_delay:                  # OPTIONAL:  expects a (float/int) number of seconds, defaults to 0
+max_output_delay:              # OPTIONAL:  expects a (float/int) number of seconds, defaults to 2x output_delay. job is considered failed if reached unless set to 0.
+dependencies:                  # OPTIONAL:  an array of job ids and a corresponding age (referring to the last finish time of the job)
+  - { job: eod,             age: 3600 }
+  - { job: readcache_check, age:  120 }
+validations:                   # OPTIONAL:  an array of validators, all must pass to give status 'success', defaults to RC: 0
+  - RC:     0                  #            a value or list of return codes considered as successful
+  - OUTPUT:                    #            TBD
+mitigations:                   # OPTIONAL:  what to do if the job fails 
+                               #            TBD
+---
