@@ -34,7 +34,40 @@ module Cotcube
         str
       end
 
-      module_function :digest_cron, :var_substitute
+      def get_mq_client(client_id: 5)
+        obj = {
+          client_id: client_id,
+        }
+        begin
+          # for more info on connection parameters see http://rubybunny.info/articles/connecting.html
+          #
+          obj[:connection]    = Bunny.new(
+            host:     'localhost',
+            port:     5672,
+            user:     SECRETS['josch_mq_user'],
+            password: SECRETS['josch_mq_password'],
+            vhost:    SECRETS['josch_mq_vhost']
+          )
+          obj[:connection].start
+          obj[:commands]      = obj[:connection].create_channel
+          obj[:channel]       = obj[:connection].create_channel
+          obj[:request_queue] = obj[:commands].queue('', exclusive: true, auto_delete: true)
+          obj[:request_exch]  = obj[:commands].direct('josch_commands')
+          obj[:replies_exch]  = obj[:commands].direct('josch_replies')
+          %w[ josch_commands  ].each do |key|
+            obj[:request_queue].bind(obj[:request_exch], routing_key: key )
+          end
+          obj[:error]      = 0
+        rescue Exception => e
+          obj[:error] = 1
+          obj[:message] = e.message
+          obj[:full_message] = e.full_message
+        end
+        obj
+      end
+
+
+      module_function :digest_cron, :var_substitute, :get_mq_client
     end
   end
 end
