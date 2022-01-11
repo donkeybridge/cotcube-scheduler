@@ -2,12 +2,12 @@ module Cotcube
   module Scheduler
 
     VALID_JOB_STATUS   = [ 
-      :valid,        # the job has passed Job validations, but pending dependency validation
       :ready,        # the job has passed Job and Library validations, but for now it is not used
       :invalid,      # the job has been tried to load, but was found to be invalid (see message)
       :scheduled,    # the job has been scheduled to start at some point in the future
       :waiting,      # the job was released but waits for other jobs to complete to meet dependencies
       :running,      # the job is currently running in a RunEnv
+      :inactive,     # the job was set to inactive manually, probably just hold aside to be used in mitigations
       :custom_1,     # placeholder
       :custom_2      # placeholder
     ]
@@ -26,7 +26,30 @@ module Cotcube
       rc:         ->(x){ x.map{|z| z.is_a? Integer}.reduce(:&) ? '' : 'given return code must be integers' }
     }
 
+    SECRETS_DEFAULT = {
+      'josch_mq_proto'    => 'http',
+      'josch_mq_user'     => 'guest',
+      'josch_mq_password' => 'guest',
+      'josch_mq_host'     => 'localhost',
+      'josch_mq_port'     => '15672',
+      'josch_mq_vhost'    => '%2F'
+    }
+
     include Cotcube::Helpers
     CONFIG = init
+
+    # Load a yaml file containing actual parameter and merge those with current
+    SECRETS = SECRETS_DEFAULT.merge(
+      lambda {
+	begin
+	  YAML.safe_load(File.read(Cotcube::Helpers.init[:secrets_file]))
+	rescue StandardError
+	  {}
+	end
+      }.call.select{|z| z.split('_').first == 'josch' }
+    )
+
+
+
   end
 end
