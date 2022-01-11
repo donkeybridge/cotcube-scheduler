@@ -6,23 +6,13 @@ module Cotcube
         require_relative "_mq_/#{part}"
       end
 
-      def self.load_library
-        library = Cotcube::Scheduler::Library.new
-        return false if library.list.select{|job| not(%i[ valid invalid ].include? job.status)}.reduce(:|)
-        library
-      end
-        
-
       def initialize(
         outputhandler: OutputHandler.new(
           location: Cotcube::Scheduler::CONFIG[:data_path] + '/log'
         )
       )
         @output = outputhandler
-        unless @library = Scheduler.load_library
-          log "Cannot startup, joblist contains invalid jobs, exiting."
-          exit 1
-        end
+        @library = Cotcube::Scheduler::Library.new
         show_library
         @mq     = Cotcube::Scheduler::Helpers.get_mq_client
         if %i[ request_exch replies_exch request_queue ].map{|z| mq[z].nil? }.reduce(:|)
@@ -54,7 +44,7 @@ module Cotcube
       end
 
       def log(msg)
-        output.puts "#{DateTime.now.strftime('%Y%m%d-%H:%M:%S:  ')}#{msg.to_s.scan(/.{1,120}/).join("\n" + ' ' * 20)}"
+        output.puts "#{DateTime.now.strftime('%Y%m%d-%H:%M:%S:  ')}#{msg.to_s.scan(/.{1,#{Cotcube::Scheduler::CONFIG[:output_width] || 120}}/).join("\n" + ' ' * 20)}"
       end
 
 

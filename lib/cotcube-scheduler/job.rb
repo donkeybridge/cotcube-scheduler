@@ -170,7 +170,7 @@ module Cotcube
           "<Job:#{format '0x%05x', object_id
               } #{format '%-30.30s', ("#{source.split('/')[..-2].join('/')}/#{name}" rescue :error)
               } #{format '%-11.11s', status.inspect
-            } [ #{format '%-11.11s', (last[:status].inspect rescue :error)
+            } [ #{format '%-11.11s', (last[:status] rescue :error).inspect
             } ] info: '#{message
             }'>"
         end
