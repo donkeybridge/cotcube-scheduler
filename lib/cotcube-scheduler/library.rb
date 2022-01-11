@@ -12,6 +12,7 @@ module Cotcube
         validate_dependencies
       end
 
+
       # dig_jobs recursively reads a directory structure and considers a YAML files in there to be jobs to load
       # the directory structure itself serves only to humans but does not provide a structure to joblist or batches
       #
@@ -25,6 +26,7 @@ module Cotcube
             job = Job.new(root: root, filename: file.split(root).last)
             unless find_by_name(job.name).nil? or job.name.nil?
               # the following message actually is wrong, as the there is no job.status :duplicate
+              # furthermore it is not found in the logs as there is no access to the scheduler obj here
               puts job.quick_print(status: :duplicate, message: 'Cannot enqueue job, another job with same NAME already exists.')
               next
             end
@@ -40,24 +42,28 @@ module Cotcube
       #
       def validate_dependencies(mitigations = [])
         checklist = list.
-          reject{|z| z[:invalid] }.
-          map{|job| 
-            { 
-              name: job.name, 
-              deps: job.dependencies.map{|z| z[:job] }, walk: [], miss: [], circular: []
+          reject{|z| z[:status] == :invalid }.
+          map{ |job|
+            {
+              name: job.name,
+              deps: job.dependencies.map{|z| z[:job] },
+              walk: [],
+              miss: [],
+              circular: []
             }
           }
-        s_find = ->(dep) { checklist.find {|j| j[:name] == dep } }
+        checklist_find = ->(name) { checklist.find {|j| j[:name] == name } }
         check_deps = -> (job, deps) {
           deps.each do |dep|
-            if found = s_find.call(dep)
+            if found = checklist_find.call(dep)
               found[:walk] << dep
               found[:deps].each do |next_dep|
                 if next_dep == job[:name]
                   found[:circular] << found[:name]
+                  checklist_find.call(job[:name])[:circular] << found[:name]
                   return
                 end
-                check_deps.call(job,s_find.call(next_dep)[:deps].select{|d| not found[:walk].include?(d) })
+                check_deps.call(job,checklist_find.call(next_dep)[:deps].select{|d| not found[:walk].include?(d) })
               end
             else
               job[:miss] << dep
@@ -67,18 +73,15 @@ module Cotcube
         checklist.each do |job|
           actual_job = find_by_name job[:name]
           check_deps.call(actual_job, job[:deps])
-          # validate, there no circular dependencies
+          # validate, there are no circular dependencies
           if not job[:circular].empty?
-            actual_job.invalidate("Job has circular dependencies: #{job[:circular].join(', ')}.")
-          # validate, there are all dependencies available
+            actual_job.invalidate("Job has circular dependencies: #{job[:circular].reject{|z| z == job[:name]}.join(', ')}.")
+            # validate, there are all dependencies available
           elsif not job[:miss].empty?
             actual_job.invalidate("Job has missing dependencies: #{job[:miss].join(', ')}.")
-          # validate, that no dependency is inactive
-          # elsif not (postponed_dependencies = job[:walk].reject{|z| (not find_by_name(z)[:inactive]) or workaround.include?(z) }).empty?  
-          #   actual_job.invalidate("Job has inactive (postponed) dependencies(: #{postponed_dependencies.join(', ')}.")
-          # set job to :postponed if inactive
           end
         end
+        checklist.map{|z| z[:status] = :ready unless z[:status] == :invalid; z }
       end
 
       def get(incl: nil, excl: nil)
@@ -88,7 +91,7 @@ module Cotcube
           select{ |job| incl.nil? ? true  : incl.include?(job.status) }.
           reject{ |job| excl.nil? ? false : excl.include?(job.status) }.
           sort_by{|job| job.source }.
-          sort_by{|job| job.last[:status].to_s }.
+          sort_by{|job| job.last[:status].to_s rescue '' }.
           sort_by{|job| job.status}
       end
 
@@ -96,6 +99,18 @@ module Cotcube
       # it is not logged to output
       def show(incl: nil, excl: nil)
         get(incl:incl, excl: excl).each {|job| p job.inspect}
+      end
+
+      def show_library(terminal: true)
+        res = [ "Jobs OK so far:" ]
+        get(incl: %i[ ready scheduled waiting running ]).each {|z| res << z.inspect }
+        res << "Jobs not OK:"
+        # sounds funny, but a valid job is 'NOK', because it did not complete dependency check
+        get(excl: %i[ ready scheduled waiting running inactive ]).each {|z| res << z.inspect }
+        res << "Jobs inactive:"
+        get(incl: %i[ inactive ]).each {|z| res << z.inspect }
+        puts res.join("\n") if terminal
+        res.join("\n")
       end
 
 
