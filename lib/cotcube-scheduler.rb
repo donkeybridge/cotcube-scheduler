@@ -14,7 +14,7 @@ include Cotcube::Helpers
 require 'raabro'
 require 'fugit'
 
-%w[ constants helpers command_parser library job ].each do |part|
+%w[ constants helpers command_parser library job scheduler validations ].each do |part|
   require_relative "cotcube-scheduler/#{part}"
 end
 

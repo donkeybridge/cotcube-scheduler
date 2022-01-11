@@ -1,0 +1,24 @@
+#!/usr/bin/env ruby
+
+require_relative '../lib/cotcube-scheduler'
+
+Signal.trap('TERM') { local_interrupt }
+Signal.trap('INT')  { local_interrupt }
+
+# TODO: Prepare reload config on SIGHUP
+Signal.trap('HUP')  { puts 'TODO: Reload config' }
+exiting = false
+
+josch = Cotcube::Scheduler::Scheduler.new 
+
+define_method :local_interrupt do
+  josch.send(:log, "JoSch Received termination request...")
+  exiting = true
+end
+
+
+begin
+  loop { exit if exiting; sleep 0.5 }
+ensure
+  josch.shutdown
+end
