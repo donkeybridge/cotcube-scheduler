@@ -33,6 +33,7 @@ module Cotcube
         #
         fail_with.call "Missing mandatory keys: '#{MANDATORY_JOB_KEYS - config.keys}'." unless (MANDATORY_JOB_KEYS - config.keys).empty?
         @name     = config[:name]
+
         load_history
 
         #command might have the structure [ENV] <command> [params]
@@ -92,7 +93,7 @@ module Cotcube
         missing_keys  = MANDATORY_JOB_KEYS.reject{|z| instance_variable_defined?("@#{z}") }
         missing_keys += OPTIONAL_JOB_KEYS.reject{|z|  instance_variable_defined?("@#{z}") }
         fail_with.call "Missing instance variables: #{missing_keys}" unless missing_keys.empty?
-        @status   = :valid
+        @status   = :ready
         @message  = 'loading OK'
       end
 
@@ -167,9 +168,9 @@ module Cotcube
           super()
         else
           "<Job:#{format '0x%05x', object_id
-              } #{format '%-30.30s', "#{source.split('/')[..-2].join('/')}/#{name}"
+              } #{format '%-30.30s', ("#{source.split('/')[..-2].join('/')}/#{name}" rescue :error)
               } #{format '%-11.11s', status.inspect
-            } [ #{format '%-11.11s', last[:status].inspect
+            } [ #{format '%-11.11s', (last[:status].inspect rescue :error)
             } ] info: '#{message
             }'>"
         end
